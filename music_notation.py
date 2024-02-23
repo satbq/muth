@@ -187,10 +187,31 @@ class TheoryStaff(Staff):
 
         return ledger_group
 
-
     def contract(self, factor=1/2):
         anchor = self.line[0].copy()
         self.line.stretch(factor, 0)
         self.line.align_to(anchor, LEFT)
         self.remainder[1].align_to(self.line, RIGHT)
         return self
+
+
+class MusicTitle(VGroup):
+    def __init__(self, composer, title, supplement=None, **kwargs):
+        all_text = Tex("\\textbf{ " + composer + " }", title).set_color(BLACK)
+        # composer_text = TextMobject("\\textbf{ " + composer + " }").set_color(BLACK)
+        # title_text = TextMobject(title).set_color(BLACK)
+
+        outline_list = VGroup(all_text[0], all_text[1])
+        outline_list.center()
+
+        outline_list[0].align_to(LEFT/2, RIGHT)
+        outline_list[1].align_to(RIGHT/2, LEFT)
+
+        if supplement is not None:
+            for line in supplement:
+                new_line = Tex(line).set_color(DARK_GRAY).scale(.8)
+                new_line.next_to(outline_list[-1], DOWN, buff=SMALL_BUFF)
+                new_line.align_to(outline_list[1], LEFT)
+                outline_list.add(new_line)
+
+        VGroup.__init__(self, *[item for item in outline_list], **kwargs)

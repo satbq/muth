@@ -8,7 +8,17 @@ BROWN = "#603917"
 CB_COLORS = [BLUE_E, "#ff8000", "#08ff40", "#e6f219",
              "#33ffff", "#ff3300", "#e64dff", BROWN]
 
+
 # Functions
+def rotate_list(pc_set, n=1):
+    n = n % len(pc_set)
+    res = pc_set[slice(n, len(pc_set))]
+    new_tail = pc_set[slice(0, n)]
+    for item in new_tail:
+        res.append(item)
+    return res
+
+
 def start_zero(pc_set, edo=12, zero_index=0):
     pc_set = np.array(pc_set)
     return np.sort(((pc_set % edo) - pc_set[zero_index]) % edo)
@@ -248,7 +258,8 @@ class Tonnetz(VMobject):
         "diag_dist": 1,
         "diag_interval": 4,
         "diag_radius": 3,
-        "dashed_boundary": True
+        "dashed_boundary": True,
+        "all_sharps": False
     }
 
     def __init__(self,
@@ -267,6 +278,7 @@ class Tonnetz(VMobject):
                  diag_dist=1,
                  diag_radius=3,
                  dashed_boundary=True,
+                 all_sharps=False,
                  **kwargs):
         VMobject.__init__(self, **kwargs)
 
@@ -285,6 +297,7 @@ class Tonnetz(VMobject):
         self.diag_interval = diag_interval
         self.diag_radius = diag_radius
         self.dashed_boundary = dashed_boundary
+        self.all_sharps = all_sharps
 
         self.horiz_vector = np.array([self.horiz_dist * np.cos(self.horiz_angle),
                                      self.horiz_dist * np.sin(self.horiz_angle),
@@ -304,6 +317,8 @@ class Tonnetz(VMobject):
     def get_nodes(self, **kwargs):
 
         pc_letters = ["C", "C\\sh", "D", "E\\fl", "E", "F", "F\\sh", "G", "A\\fl", "A", "B\\fl", "B"]
+        if self.all_sharps is True:
+            pc_letters = ["C", "C\\sh", "D", "D\\sh", "E", "F", "F\\sh", "G", "G\\sh", "A", "A\\sh", "B"]
         nodes = VGroup()
 
         for j in range(-self.horiz_radius, self.horiz_radius+1):
