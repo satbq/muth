@@ -34,7 +34,7 @@ def brightness_comps(pc_set, edo=12, rounder=10):
 
 
 class BrightnessGraph(VMobject):
-    def __init__(self, pc_set, position_matrix=None,
+    def __init__(self, pc_set, position_matrix=None, node_names=None,
                  edo=12, arrow_stroke_width=3, arrow_tip_length=.2,
                  pc_scale=.35, pc_color=BLACK, v_buff=0.8, h_buff=.7,
                  rn_scale=.5, rn_color=BLACK,
@@ -47,6 +47,10 @@ class BrightnessGraph(VMobject):
         SIM_row_sums = current_SIM.sum(axis=0)
 
         mode_labels = VGroup(*[Tex(ROMAN_NUMERALS[i]).set_color(rn_color).scale(rn_scale) for i in range(1, card+1)])
+        if node_names is not None:
+            for i, name in enumerate(node_names):
+                if name is not None:
+                    mode_labels[i] = Tex(name).set_color(rn_color).scale(rn_scale)
 
         mode_pcs = Matrix(current_SIM.transpose(), v_buff=v_buff, h_buff=h_buff).set_color(pc_color).scale(pc_scale)
         for bracket in mode_pcs.get_brackets():
@@ -69,7 +73,22 @@ class BrightnessGraph(VMobject):
         reduced_matrix = nx.adjacency_matrix(reduced_graph)
         reduced_matrix = reduced_matrix.todense()
 
-        nodes.arrange_in_grid(cols=2, buff=LARGE_BUFF)
+        # nodes.arrange_in_grid(cols=2, buff=LARGE_BUFF)
+
+        if len(np.shape(position_matrix)) == 1:
+            brightest_mode = nodes[np.argmax(SIM_row_sums)]
+            darkest_mode = nodes[np.argmin(SIM_row_sums)]
+            brightest_mode.to_edge(UP)
+            darkest_mode.to_edge(DOWN)
+            step_size = (brightest_mode.get_y() - darkest_mode.get_y())/(np.max(SIM_row_sums)-np.min(SIM_row_sums))
+            sizes_above_darkest = SIM_row_sums - np.min(SIM_row_sums)
+            heights = np.zeros(card)
+            for i, size in zip(range(card), sizes_above_darkest):
+                heights[i] = (step_size * size) + darkest_mode.get_y()
+            new_position_matrix = np.zeros((card, 3))
+            for i, width, height in zip(range(card), position_matrix, heights):
+                new_position_matrix[i, :] = np.array([width, height, 0])
+            position_matrix = new_position_matrix
 
         for row, node in zip(position_matrix, nodes):
             node.move_to(row)
