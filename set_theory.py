@@ -264,6 +264,7 @@ class Tonnetz(VMobject):
 
     def __init__(self,
                  edo=12,
+                 central_pc = 0,
                  node_color=BLACK,
                  line_color=BLACK,
                  node_radius=0.35,
@@ -283,6 +284,7 @@ class Tonnetz(VMobject):
         VMobject.__init__(self, **kwargs)
 
         self.edo = edo
+        self.central_pc = central_pc
         self.node_color = node_color
         self.line_color = line_color
         self.node_radius = node_radius
@@ -324,7 +326,7 @@ class Tonnetz(VMobject):
         for j in range(-self.horiz_radius, self.horiz_radius+1):
             for i in range(-self.diag_radius, self.diag_radius+1):
                 position = ORIGIN + (i * self.diag_vector) + (j * self.horiz_vector)
-                pitch_class_integer = (i*self.diag_interval + j*self.horiz_interval) % self.edo
+                pitch_class_integer = (self.central_pc + i*self.diag_interval + j*self.horiz_interval) % self.edo
 
                 if self.letter_names is False:
                     digit = Tex(str(pitch_class_integer), color=self.node_color)
