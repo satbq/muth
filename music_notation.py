@@ -1,4 +1,5 @@
 from manim import *
+from manim.utils.images import get_full_vector_image_path
 
 class Staff(VGroup):
     # The idea here is to make initializing a staff define some parameters for the scene
@@ -194,6 +195,20 @@ class TheoryStaff(Staff):
         self.remainder[1].align_to(self.line, RIGHT)
         return self
 
+class Dynamic(VGroup):
+    def __init__(self, value="p", **kwargs):
+        super().__init__(**kwargs)
+        if "color" in kwargs:
+            self.color = kwargs["color"]
+        else:
+            self.color = BLACK
+
+        all_dynamics = SVGMobject(get_full_vector_image_path("TS_dynamics.svg")).set_color(self.color)
+        possible_values = ["ppp", "pp", "p", "mp", "mf", "f", "ff", "fff"]
+        selected_dynamic = int(np.array([thing == value for thing in possible_values]).nonzero()[0])+1
+        print(selected_dynamic)
+
+        self.add(all_dynamics[selected_dynamic])
 
 class MusicTitle(VGroup):
     def __init__(self, composer, title, supplement=None, **kwargs):
