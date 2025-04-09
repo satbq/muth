@@ -1,6 +1,7 @@
 from manim import *
 from set_theory import rotate_list
 from set_theory import start_zero
+from set_theory import MuTeX
 import networkx as nx
 
 ROMAN_NUMERALS = ["N", "I", "II", "III", "IV", "V", "VI",
@@ -50,7 +51,7 @@ class BrightnessGraph(VMobject):
         if node_names is not None:
             for i, name in enumerate(node_names):
                 if name is not None:
-                    mode_labels[i] = Tex(name).set_color(rn_color).scale(rn_scale)
+                    mode_labels[i] = Tex(name, tex_template=MuTeX).set_color(rn_color).scale(rn_scale)
 
         mode_pcs = Matrix(current_SIM.transpose(), v_buff=v_buff, h_buff=h_buff).set_color(pc_color).scale(pc_scale)
         for bracket in mode_pcs.get_brackets():

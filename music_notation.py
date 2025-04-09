@@ -40,6 +40,13 @@ class Staff(VGroup):
     def get_space(self):
         return self.line[1].get_y() - self.line[0].get_y()
 
+    def contract(self, factor=1/2):
+        anchor = self.line[0].copy()
+        self.line.stretch(factor, 0)
+        self.line.align_to(anchor, LEFT)
+        return self
+
+
 class TheoryStaff(Staff):
     # Need to implement "cluster"
     # rework melody to use *args taking tuples (like chords), not strings of positions and accidentals
@@ -194,24 +201,89 @@ class TheoryStaff(Staff):
         self.remainder[1].align_to(self.line, RIGHT)
         return self
 
+class Score(VGroup):
+    # A thought from May 3, 2022: rewrite this using unpack_groups=False. That should get around the WHOLE
+    # phonebook problem.
+    """
+    This class makes a few assumptions about how your score is formatted as an SVG file:
+    - Really seems to work best if you make the Lilypond with A5-size paper.
+    - Its lowest layer (viewed in Illustrator) is a background rectangle.
+      That rectangle should be the same size for all score objects you want to animate together.
+    - All of the note heads/stems should come next.
+      Given Lilypond's output, there should be 1 note head & 2 stem objects for each note. (Add points for whole notes.)
+      Add duplicates for notes with shared stems. Don't include ledger lines here.
+      The note head should be the lowest element of each group.
+      Order notes from first to last (left to right) by attack, then top-to-bottom within a verticality.
+    - In general, objects that don't animate (like staff lines, key sigs) should be their own Score object.
+    - If bar lines are included, they should be the objects just after note heads, in left-right/top-down order.
+    - It's assumed that bar-lines are one object. This should be ensured by making them compound paths in illustrator.
+    Actually, better than compound path is merge > pathfinder. (Ctrl+Shift+8)
 
-class MusicTitle(VGroup):
-    def __init__(self, composer, title, supplement=None, **kwargs):
-        all_text = Tex("\\textbf{ " + composer + " }", title).set_color(BLACK)
-        # composer_text = TextMobject("\\textbf{ " + composer + " }").set_color(BLACK)
-        # title_text = TextMobject(title).set_color(BLACK)
+    num_notes should count how many notes in the score. (Voices sharing a note head or stem DO count separately.)
 
-        outline_list = VGroup(all_text[0], all_text[1])
-        outline_list.center()
+    Note to self: maybe later add a method that attaches other objects like ledger lines & articulations to notes.
+    """
+    def __init__(self, file, num_notes, num_barlines, phonebook, scale_factor=1, **kwargs):
+        self.score = SVGMobject(file, stroke_width=0, color=BLACK)
+        self.remove_background(self.score, scale_factor)
+        self.group_notes(self.score, num_notes)
+        self.group_barlines(self.score, num_notes, num_barlines)
+        self.group_remainder(self.score, num_notes, num_barlines)
+        if phonebook is not None:
+            self.attach(self.score, phonebook)
 
-        outline_list[0].align_to(LEFT/2, RIGHT)
-        outline_list[1].align_to(RIGHT/2, LEFT)
+        VGroup.__init__(self, *[self.note, self.barline, self.remainder], **kwargs)
+        # VGroup.__init__(self, *[self.note, self.barline], **kwargs)
 
-        if supplement is not None:
-            for line in supplement:
-                new_line = Tex(line).set_color(DARK_GRAY).scale(.8)
-                new_line.next_to(outline_list[-1], DOWN, buff=SMALL_BUFF)
-                new_line.align_to(outline_list[1], LEFT)
-                outline_list.add(new_line)
+    def remove_background(self, object, scale_factor):
+        object.remove(object[0])
+        object.scale(scale_factor)
 
-        VGroup.__init__(self, *[item for item in outline_list], **kwargs)
+    def group_notes(self, object, num_notes):
+        self.note = VGroup()
+        for note in range(num_notes):
+            new_note = object[slice(3*note, (3*note)+3)]
+            self.note.add(new_note)
+
+    def group_barlines(self, object, num_notes, num_barlines):
+        self.barline = VGroup()
+        for barline in range(num_barlines):
+            bar = object[(3*num_notes) + barline]
+            self.barline.add(bar)
+
+    def group_remainder(self, object, num_notes, num_barlines):
+        self.remainder = VGroup()
+        for i in range((3*num_notes)+num_barlines, len(object.submobjects)):
+            symbol = object[i]
+            self.remainder.add(symbol)
+
+    def attach(self, object, phonebook):
+        # This expects a dictionary as the phonebook, such as { 0: [27, 31], 5: [40], 6: [41, 42] }
+        for num, accessories in phonebook.items():
+            source = object.copy()
+            for x in accessories:
+                accessory = source[x]
+                self.note[num].add(accessory)
+                self.barline.remove(object[x])
+                self.remainder.remove(object[x])
+
+
+def StaffAlign(score, staff):
+    # This assumes that your score has a bar line that should touch the top line of the staff; and a rightmost bar line
+    # to align to the right edge of the staff.
+    score.shift(staff.line[4].get_critical_point(UP) - score.barline[0].get_critical_point(UP))
+    score.align_to(staff, RIGHT)
+
+class ScoreReplacementTransform(AnimationGroup):
+    """
+    NB This mimics the behavior of ReplacementTransform, not Transform
+    """
+    def __init__(self, score_1, score_2, **kwargs):
+        note_animation = ReplacementTransform(score_1.note, score_2.note)
+        barline_animation = ReplacementTransform(score_1.barline, score_2.barline)
+        old_remainder = FadeOut(score_1.remainder, rate_func=rush_from)
+        new_remainder = FadeIn(score_2.remainder, rate_func=rush_into)
+        # score_1.remove(score_1.remainder)
+        # score_1.add(score_2.remainder)
+
+        AnimationGroup.__init__(self, *[note_animation, barline_animation, old_remainder, new_remainder], **kwargs)
